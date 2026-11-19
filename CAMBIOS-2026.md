@@ -10,6 +10,8 @@
 > de su respuesta con precios inventados. **Tus números saldrán distintos** a los del vídeo, porque los
 > precios reales han seguido moviéndose.
 > Sin ejecutar: `Capitulo_09_MT5`, `ES_ML_Capítulo_08_SVR`, `ES_ML_Capítulo_09_MT5_Trading_en_Vivo_Random` (MetaTrader 5 solo funciona en Windows, con el terminal y una cuenta).
+> En noviembre de 2026 se corrigieron además errores del propio código del curso, que dan resultados
+> distintos a los del vídeo: ver [Correcciones de errores del curso](#correcciones-de-errores-del-curso-noviembre-de-2026).
 
 ## Cómo usarla
 
@@ -79,3 +81,61 @@ Algunas celdas dan un error a propósito para explicar algo (por ejemplo, qué e
 - **Capítulo 7, celda de estandarización:** `X_test = sc.transform(X_test)` → `X_test_sc = sc.transform(X_test)`.
   Las celdas siguientes usan `X_test_sc`, que nunca se creaba (`NameError`). Es una errata del notebook,
   no un cambio de librería; la función completa del final del capítulo ya lo hacía bien.
+
+## Correcciones de errores del curso (noviembre de 2026)
+
+Aquí no ha cambiado ninguna librería: son fallos del código del curso que enseñaban algo mal. **Lo que
+verás en pantalla será distinto del vídeo**, y está explicado en cada punto. Comprobado: los capítulos 6 y 7 se han
+vuelto a ejecutar enteros con `requirements.txt` y la réplica de Yahoo de arriba (todos sin error). Las
+cifras de antes y después salen de Yahoo Finance real, descargado el 19 de noviembre de 2026. Los notebooks de MetaTrader 5 **no se han ejecutado** (solo Windows).
+Los notebooks conservan la salida guardada del vídeo: en las celdas de estos puntos, lo guardado es el
+resultado antiguo (por ejemplo, `Alpha: 0.9 %`); al ejecutarlas, sale el nuevo.
+
+### 1. Alfa (capítulos 6 y 7)
+
+**En el vídeo:** alfa se calcula como `252 * mean * (1-beta)` (celda 13) y, dentro de `BackTest`, como
+`serie.mean() - beta*serie.mean()`. Sale un 0,9 % para Google. El `BackTest` del capítulo 7 (celda 25) hace el mismo cálculo.
+
+**Qué estaba mal:** las dos expresiones son el retorno medio de la cartera multiplicado por (1 − beta).
+Ahí no aparece el mercado, así que no dicen si la cartera lo ha hecho mejor que él, y el signo puede salir
+al revés que el real. La fórmula escrita en la celda 12 tenía el mismo fallo.
+
+**Ahora:** es el alfa de Jensen, con tipo libre de riesgo cero: el retorno medio de la cartera menos beta
+por el retorno medio del SP500, anualizado igual que antes.
+
+```python
+alpha = (252 * (mean - beta*val["SP500"].mean()))*100                        # celda 13
+alpha = annualiazed_scalar * (serie.mean() - beta*val["SP500"].mean())       # BackTest
+```
+
+La fórmula de la celda 12 pasa a ser $r_{PF} - r_f - \beta (r_M - r_f)$. `BackTest` se llama igual y
+recibe lo mismo.
+
+**Qué cambia en los números** (alfa anual):
+
+| | Antes | Ahora |
+|---|---|---|
+| Google 2004–2020 (beta 0,965), cap. 6, celda 13 | 0,9 % | **17,2 %** |
+| Regresión lineal (beta −0,54), cap. 6, celda 23 | −3,159 % | 4,578 % |
+| SVR sobre Google (beta ≈ 0,95), cap. 7, celda 27 | ≈ 0,9 a 1,8 % | 11,4 % |
+| SVR sobre BTC-USD (beta 0,391), cap. 7, celda 31 | −19,7 % | −37,7 % |
+
+Las del capítulo 7 usan precios hasta hoy, así que varían un poco de una ejecución a otra.
+
+Alfa no mide seguridad: es la rentabilidad que se obtiene por encima de la que tocaría por el riesgo de
+mercado asumido (beta). Con beta cercana a 0 apenas cambia; con beta cercana a 1, el cálculo antiguo daba
+casi 0 fuera cual fuera el alfa real.
+
+### 2. Capítulo 9 (MetaTrader 5): instalación y avisos (sin ejecutar)
+
+- **Celda 0 de el notebook Random:** se han comentado `numpy==1.19.2` y `scipy==1.6.2`, que no se
+  instalan en un Python actual: numpy 1.19.2 solo trae instaladores hasta Python 3.8, y scipy 1.6.2 no
+  admite Python 3.10 o posterior (en 3.12, pip intenta compilar numpy y falla). También se ha comentado
+  `pip install datetime`: `datetime` viene con Python, y en PyPI ese nombre es otro paquete. `numpy` se
+  sigue instalando, porque la piden `ta` y `MetaTrader5`. Si instalas en un entorno virtual, quita también
+  `--user`, que ahí da error.
+- **Avisos, sin cambiar el código:** hay un comentario en `filling_mode - 1` (en `Capitulo_09_MT5.py`) y otro en
+  el `while True` del notebook Random. `filling_mode` es una máscara de bits del broker: restarle 1 solo acierta si el
+  símbolo admite un único modo de ejecución, y si no, la orden puede rechazarse. El bucle no tiene ninguna
+  pausa: repite la ronda durante todo el segundo de arranque y luego da vueltas sin parar. Opera
+  siempre en una **cuenta demo**, y empieza con `live = False`.

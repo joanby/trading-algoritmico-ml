@@ -139,3 +139,35 @@ casi 0 fuera cual fuera el alfa real.
   símbolo admite un único modo de ejecución, y si no, la orden puede rechazarse. El bucle no tiene ninguna
   pausa: repite la ronda durante todo el segundo de arranque y luego da vueltas sin parar. Opera
   siempre en una **cuenta demo**, y empieza con `live = False`.
+
+### 3. Robot SVR (`ES_ML_Capítulo_08_SVR`): faltaba `import time`
+
+**En el notebook:** el bucle del robot termina cada ronda con `time.sleep(1)`, pero la celda no importa
+`time` (`from datetime import datetime` no lo trae, y `Capitulo_09_MT5.py` tampoco).
+
+**Qué estaba mal:** en cuanto el robot terminaba su primera ronda de órdenes, se paraba con
+`NameError: name 'time' is not defined`. La pausa se añadió en septiembre de 2022; la salida guardada
+del notebook es de noviembre de 2021 y aún no la tenía.
+
+**Ahora:** la celda importa `time`, como los robots de los otros cursos de la ruta.
+
+**Comprobado** con un MetaTrader 5 simulado (precios diarios de Yahoo; las órdenes no salen a ningún
+broker): antes, tres órdenes y `NameError`; ahora, tres órdenes y el bucle sigue esperando a la ronda
+siguiente.
+
+**Avisos en el mismo robot, sin cambiar el código:** las tres órdenes de `info_order` se llaman
+«RUSSEL 2000», «Bitcoin» y «Nasdaq 100», pero las tres operan `EURUSD` (con 1, 0,1 y 0,3 lotes). Como es
+el mismo símbolo, la segunda y la tercera encuentran ya abierta la posición de la primera: en la práctica
+se opera 1 lote de EURUSD. El vídeo habla de esos tres activos; si quieres operarlos, pon sus símbolos de
+tu broker (en el notebook Random son `US2000` y `NAS100`). Además, `weekday() not in (1,2)` deja fuera
+martes y miércoles, no el fin de semana, que es cuando sale el «Market closed» del vídeo.
+
+## Erratas del vídeo (el código no cambia)
+
+- **SVR (capítulos 7 y 8).** `SVR()` usa por defecto `epsilon=0.1`: un pasillo de ±10 % alrededor de la
+  predicción en el que los errores no cuentan. Casi todos los retornos diarios caben dentro, así que el
+  modelo apenas aprende y predice casi siempre lo mismo. Con Yahoo real (19-nov-2026) y la regresión del
+  capítulo 7: con Google, 23 vectores soporte y en compra el 94 % de los días del test (suma de retornos
+  1,10 frente a 1,18 de mantener la acción); con el Nasdaq (`^IXIC`), 5 vectores soporte, en compra el
+  100 % de los días y exactamente lo mismo que mantener el índice (1,911). Lo que el vídeo celebra de estas
+  estrategias es, sobre todo, haber tenido la acción o el índice.
